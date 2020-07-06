@@ -3,19 +3,34 @@
 #include <iostream>
 #include <string.h> 
 #define NAME_LEN 20
+#define Comon_Ratio 100
+#define Deposit_Ratio 50
 using namespace std;
+int makeacclan =0;
 
-class Account {
+
+class Common_Account {
+public:
+	int Ratio = Comon_Ratio;
+};
+
+class Deposit_Account {
+public:
+	int Ratio = Deposit_Ratio;
+};
+
+class Account : public Common_Account,public Deposit_Account  {
 private:
 	const int accID;
 	int balance;
 	char* cusName;
 	const long long SSN;
+	int acctype;
 public:
 
 
-	Account(int accID, int balance, char* cusName, long long SSN) :accID(accID), SSN(SSN) {
-
+	Account(int accID, int balance, char* cusName, long long SSN,int acctype) :accID(accID), SSN(SSN) {
+		this->acctype = acctype;
 		this->balance = balance;
 		this->cusName = new char[NAME_LEN];
 		strcpy_s(this->cusName, NAME_LEN, cusName);
@@ -34,6 +49,15 @@ public:
 	}
 	void accpl(int mon) {
 		balance += mon;
+		if (acctype == 1) {
+			balance += balance / Common_Account::Ratio;
+			cout << "발생한 이자액 : " << balance / Common_Account::Ratio << endl;
+		}
+		else if (acctype == 2) {
+			balance += balance / Deposit_Account::Ratio;
+			cout << "발생한 이자액 : " << balance / Deposit_Account::Ratio << endl;
+		}
+		
 	}
 	bool accmin(int mon) {
 		if (balance < mon) {
@@ -54,8 +78,12 @@ public:
 		return this->SSN == ssn;
 	}
 };
-enum eCheckType {
-	ID, SSN
+
+class Account_Deposit : public Account {
+
+};
+enum eCheckType{
+	ID, SSN, SSNVAL
 };
 
 class AccountManager {
@@ -67,7 +95,20 @@ public:
 		for (int a = 0; a < Max; a++)
 			delete acclist[a];
 	}
-	void accmake() {
+
+	void selwhichacc() {
+		int typewhatacc =0;
+		cout << "---어떤 계좌를 생성하시겠습니까?---" << endl;
+		cout << "	 1.보통계좌" << endl;
+		cout << "         2.예금 계좌" << endl << endl;
+		cout << "선택 : ";
+		cin >> typewhatacc;
+		if (typewhatacc == 1 || typewhatacc == 2)accmake(typewhatacc);
+		else cout << "         제대로 선택하세요" << endl << endl;
+		return;
+	}
+
+	void accmake(int tomakeacc) {
 		int accID;
 		int a;
 		char cusName[NAME_LEN];
@@ -89,11 +130,13 @@ public:
 		}
 		cout << "주민등록 번호 입력(-제외) : ";
 		cin >> SSN;
-		if (check(SSN, eCheckType::SSN) != -1) {
-			cout << "이미 가입된 주민등록번호 입니다" << endl;
+		if (check(SSN, eCheckType::SSN) == -1 && tomakeacc == 2) {
+			cout << "보통 계좌를 1개 이상 생성 하여야 예금계좌 생성이 가능합니다." << endl;
 			return;
 		}
-		acclist[Max] = new Account(accID, a, cusName, SSN);
+		if (tomakeacc == 1)  a += a / Comon_Ratio;
+		else if (tomakeacc == 2)  a += a / Deposit_Ratio;
+		acclist[Max] = new Account(accID, a, cusName, SSN,tomakeacc);
 		Max++;
 		return;
 	}
@@ -134,6 +177,7 @@ public:
 	}
 	template<typename T>
 	int check(T a, eCheckType type) {
+		int howmanyssn = 0;
 		for (int i = 0; i < Max; i++) {
 
 			if (type == ID)
@@ -142,8 +186,13 @@ public:
 			if (type == SSN)
 				if (acclist[i]->checkSSN(a))
 					return i;
-
+			if (type == SSNVAL)
+				if (acclist[i]->checkSSN(a))
+					howmanyssn++;
 		}
+		if (type == SSNVAL)
+			return howmanyssn;
+
 		return -1;
 	}
 };
@@ -166,7 +215,7 @@ int main() {
 		switch (selnum)
 		{
 		case 1: {
-			manager->accmake();
+			manager->selwhichacc();
 			break;
 		}
 		case 2: {
